@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 pair<double, double> solver(unordered_map<string, Wire> &wires, unordered_map<string, vector<string>> &cells,
  unordered_map<string, vector<string>> &input_cells, unordered_set <string> &pt1_cell_names, unordered_set <string> &pt2_cell_names){
     double cost = INT32_MAX, ratio = 0;
-    priority_queue<pair<int, string>, vector<pair<int, string>>, less<pair<int, string>> > q;
+    queue<string> q;
     unordered_set<string> visited; 
     unordered_set<string> visited_wire; 
     unordered_set <string> temp_names;
@@ -85,18 +85,15 @@ pair<double, double> solver(unordered_map<string, Wire> &wires, unordered_map<st
     unordered_set<string> temp_visited_wire; 
     for (auto input : input_cells){
         string connection = input.second[0];
-        double cur_cost = 0;
         if (visited.find(connection) == visited.end()){
             visited.insert(connection);
-           
+            q.push(connection);
             for (auto w : cells[connection]){
                 if (temp_visited_wire.find(w) == temp_visited_wire.end()){
-                    cur_cost += wires[w].cost;
+                    temp_cost += wires[w].cost;
                     temp_visited_wire.insert(w);
                 }
             }
-            q.push(make_pair(cur_cost,connection));
-            temp_cost += cur_cost;
             cur_num ++;
         }
         /*for (auto connection : input.second){
@@ -110,7 +107,7 @@ pair<double, double> solver(unordered_map<string, Wire> &wires, unordered_map<st
     }
     while (q.size()){
         temp_visited_wire.clear();
-        string cur = q.top().second;
+        string cur = q.front();
         q.pop();
         cout << cur << ":\n";
         for (auto w : cells[cur]){
@@ -118,19 +115,17 @@ pair<double, double> solver(unordered_map<string, Wire> &wires, unordered_map<st
                 visited_wire.insert(w);
                 temp_cost -= wires[w].cost;
                 for (auto c : wires[w].connections){
-                    double cur_cost = 0;
                     if (visited.find(c) == visited.end()){
                         visited.insert(c);
+                        q.push(c);
                         cout << "     " << c << ":";
                         for (auto w : cells[c]){
                             cout << w << " ";
                             if (temp_visited_wire.find(w) == temp_visited_wire.end()){
                                 temp_visited_wire.insert(w);
-                                cur_cost += wires[w].cost;
+                                temp_cost += wires[w].cost;
                             }
                         }
-                        temp_cost += cur_cost;
-                        q.push(make_pair(cur_cost,c));
                         cout << endl;
                         cur_num ++;
                     }
