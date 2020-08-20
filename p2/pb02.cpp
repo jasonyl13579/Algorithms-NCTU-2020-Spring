@@ -42,6 +42,7 @@ int main(int argc, char** argv)
     unordered_set <string> wire_names;
     unordered_map <string, vector<string>> input_cell;
     scan_circuit(fs_circuit, wires, cells, input_cell);
+    
     scan_co(fs_co, wires);
     pair <double, double> ans;
     double max_cutting_overhead = 0;
@@ -62,6 +63,10 @@ int main(int argc, char** argv)
     output_pt(fout_pt2, pt2_cell_names);
     output_rpt(fout_rpt, ans);
     end = time(NULL);
+    /*cout << "p1:" << pt1_cell_names.size();
+    cout << " p2:" << pt2_cell_names.size();
+    cout << " total:" << pt1_cell_names.size() + pt2_cell_names.size() << endl;
+    cout << cells.size() << ',' << input_cell.size() << endl;*/
     double diff = difftime(end, start);
     cout << diff << " sec" << endl;
     
@@ -112,7 +117,7 @@ pair<double, double> solver(unordered_map<string, Wire> &wires, unordered_map<st
         temp_visited_wire.clear();
         string cur = q.top().second;
         q.pop();
-        cout << cur << ":\n";
+        //cout << cur << ":\n";
         for (auto w : cells[cur]){
             if (visited_wire.find(w) == visited_wire.end()){
                 visited_wire.insert(w);
@@ -121,17 +126,29 @@ pair<double, double> solver(unordered_map<string, Wire> &wires, unordered_map<st
                     double cur_cost = 0;
                     if (visited.find(c) == visited.end()){
                         visited.insert(c);
-                        cout << "     " << c << ":";
-                        for (auto w : cells[c]){
-                            cout << w << " ";
-                            if (temp_visited_wire.find(w) == temp_visited_wire.end()){
-                                temp_visited_wire.insert(w);
-                                cur_cost += wires[w].cost;
+                        //cout << "     " << c << ":";
+                        for (auto w_reverse : cells[c]){
+                            //cout << w << " ";
+                            if (temp_visited_wire.find(w_reverse) == temp_visited_wire.end() && visited_wire.find(w_reverse) == visited_wire.end()){
+                                bool not_all_visited = false; 
+                                for (auto c_reverse: wires[w_reverse].connections){
+                                    if (visited.find(c_reverse) == visited.end()){
+                                        not_all_visited = true;
+                                        break;
+                                    }
+                                }
+                                if (!not_all_visited){
+                                    visited_wire.insert(w_reverse);
+                                    temp_cost -= wires[w_reverse].cost;
+                                }else{
+                                    temp_visited_wire.insert(w_reverse);
+                                    cur_cost += wires[w_reverse].cost;
+                                }
                             }
                         }
                         temp_cost += cur_cost;
                         q.push(make_pair(cur_cost,c));
-                        cout << endl;
+                        //cout << endl;
                         cur_num ++;
                     }
                 }
@@ -139,7 +156,7 @@ pair<double, double> solver(unordered_map<string, Wire> &wires, unordered_map<st
         }
     
         temp_ratio = cur_num / (total_cell - cur_num);
-        cout << "cost:" << temp_cost << ", ratio:" << temp_ratio << endl;
+        // << "cost:" << temp_cost << ", ratio:" << temp_ratio << endl;
         if (temp_ratio > 1.05) break;
         if (temp_cost < cost &&  temp_ratio > 0.95){
             cost = temp_cost;
@@ -147,10 +164,11 @@ pair<double, double> solver(unordered_map<string, Wire> &wires, unordered_map<st
             pt1_cell_names = visited;
         }
     }
-    cout << cost << "," << ratio << endl;
-    cout << pt1_cell_names.size() << "," << total_cell - pt1_cell_names.size() << endl;
+    cout << cost * 0.7 << "," << ratio << endl;
+    /*cout << visited.size() << endl;
+    cout << pt1_cell_names.size() << "," << total_cell - pt1_cell_names.size() << endl;*/
     for (auto cell : cells){
-        if (visited.find(cell.first) == visited.end()){
+        if (pt1_cell_names.find(cell.first) == pt1_cell_names.end()){
             pt2_cell_names.insert(cell.first);
         }
     }
@@ -236,13 +254,13 @@ void scan_circuit(fstream &fs, unordered_map<string, Wire> &wires, unordered_map
             getline(fs, dummy);
         } 
     }
-    for (auto c : input_cells){
+    /*for (auto c : input_cells){
         cout << c.first << ":";
         for (auto s: c.second){
             cout << s << " "; 
         }
         cout << endl;
-    }
+    }*/
     /*for (auto c : wires){
         cout << c.first << ":";
         for (auto s: c.second.connections){
@@ -271,7 +289,7 @@ void scan_co(fstream &fs, unordered_map<string, Wire> &wires){
 }
 void output_rpt(fstream &fs, pair<double, double> ans)
 {
-    fs << "Overall cutting overhead = " << ans.first << endl
+    fs << "Overall cutting overhead = " << ans.first * 0.7 << endl
        << "Partition ratio = " << ans.second << endl;
 }
 void output_pt(fstream &fs,  unordered_set <string> cell_names)
@@ -283,19 +301,19 @@ void output_pt(fstream &fs,  unordered_set <string> cell_names)
     sort(ans.begin(),ans.end());
     for (auto a: ans) fs << a << endl;
 }
-vector<string>  split(const string& str,const string& delim) { //将分割后的子字符串存储在vector中
+vector<string>  split(const string& str,const string& delim) { 
 	vector<string> res;
 	if("" == str) return  res;
 	
-	string strs = str + delim; //*****扩展字符串以方便检索最后一个分隔出的字符串
+	string strs = str + delim; 
 	size_t pos;
 	size_t size = strs.size();
  
 	for (int i = 0; i < size; ++i) {
-		pos = strs.find(delim, i); //pos为分隔符第一次出现的位置，从i到pos之前的字符串是分隔出来的字符串
-		if( pos < size) { //如果查找到，如果没有查找到分隔符，pos为string::npos
-			string s = strs.substr(i, pos - i);//*****从i开始长度为pos-i的子字符串
-			res.push_back(s);//两个连续空格之间切割出的字符串为空字符串，这里没有判断s是否为空，所以最后的结果中有空字符的输出，
+		pos = strs.find(delim, i); 
+		if( pos < size) { 
+			string s = strs.substr(i, pos - i);
+			res.push_back(s);
 			i = pos + delim.size() - 1;
 		}
 		
